@@ -1,7 +1,7 @@
 # Experiments to get better results
 
 
-## Only center crop:
+## Only center crop (commit: 2afed36):
 
 eugenioculurciello@Pora:~/FWDNXT/github/demos/video-localization(master) $ python3 demo.py -c /Users/eugenioculurciello/Desktop/Marsh/video2-small.srt -i /Users/eugenioculurciello/Desktop/Marsh/video2-2-small.mp4 
 Demo captioning for Video Localization
