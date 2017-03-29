@@ -43,9 +43,9 @@ Run as: ```python3 vloc.py -i video1.mp4```
 This will save a embedding file `video1.mp4.emb.npy` that saves embeddings of each frame of video1 used for localization.
 
 
-### Demo:
+## Demo:
 
-The demo will take a caption file and a video input to label all object in each frame of the video.
+The demo will take a caption file and a video input to label all object in each frame of the video. Demos need video embedding to run.
 
 ```python3 demo.py -c video1.srt -i video2.mp4```
 
@@ -56,4 +56,6 @@ Show closest frames in a video to selected frame in same video:
 
 Summarize a video:
 
-```python3 vloc.py -i video.mp4 --summarize True```
+```python3 vloc.py -i video.mp4 --summarize True --vst 0.1```
+
+Will write a `video.mp4.sum.npy` with embedding of summarized video frames only. `vst` is the video summarization threshold: smaller = more frames, larger = less frames in summary. 
