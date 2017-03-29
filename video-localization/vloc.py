@@ -27,6 +27,9 @@ import torchvision.transforms as transforms
 from annoy import AnnoyIndex # https://github.com/spotify/annoy
 np.set_printoptions(precision=2)
 
+crop_types = ['C', 'L', 'R'] # crop types used to process frames for recognition
+
+
 def define_and_parse_args():
     # argument Checking
     parser = argparse.ArgumentParser(description="Video location Demo")
@@ -83,15 +86,15 @@ def preProcFrames(frame, xres, yres, newsize, crop_type):
   
   elif crop_type == 'L': # left crop
     if xres > yres:
-      frame = frame[:, xres - yres:xres, :]
+      frame = frame[:, int(xres - yres):int(xres), :]
     else:
-      frame = frame[yres - xres:yres, :, :]
+      frame = frame[int(yres - xres):int(yres), :, :]
   
   elif crop_type == 'R': # right crop
     if xres > yres:
-      frame = frame[:, 0:yres, :]
+      frame = frame[:, 0:int(yres), :]
     else:
-      frame = frame[0:xres, :, :]
+      frame = frame[0:int(xres), :, :]
 
   else:
     print('ERROR: Undefined crop type!')
@@ -109,14 +112,20 @@ def preProcFrames(frame, xres, yres, newsize, crop_type):
 
 def getFrameEmbedding(model, frame, xres, yres, newsize):
 
-  pframe = preProcFrames(frame, xres, yres, newsize, 'C')
-     
-  # process via CNN model:
-  output = model(pframe)
-  if output is None:
-    print('no output from CNN model file')
+  out = np.zeros( (len(crop_types), 512) )
 
-  return (output.data.numpy()[0]).reshape(512) # get data from pytorch Variable, [0] = get vector from array
+  for c in range(len(crop_types)):
+
+    pframe = preProcFrames(frame, xres, yres, newsize, crop_types[c])
+     
+    # process via CNN model:
+    output = model(pframe)
+    if output is None:
+      print('no output from CNN model file')
+
+    out[c] = (output.data.numpy()[0]).reshape(512) # get data from pytorch Variable, [0] = get vector from array
+
+  return out
 
 
 def openVideo(filename):
@@ -133,7 +142,7 @@ def createVideoEmbeddings(model, filename, newsize):
   cap, frame_count, xres, yres = openVideo(filename)
 
   # save embeddings in this:
-  embeddings = np.zeros( (frame_count, 512) )
+  embeddings = np.zeros( (frame_count, len(crop_types), 512) )
 
   for i in tqdm(range(frame_count-2)):
     ret, frame = cap.read()
@@ -198,9 +207,11 @@ def localizeInVideo(model, filename, newsize, frame_query, num_neighbors, n_tree
 
   # get embedding of query frame:  
   output = getFrameEmbedding(model, frame_query, xres, yres, newsize)
+  output = output.reshape((output.shape[0]*output.shape[1]))
 
   # load embeddings:
   embeddings = np.load(filename+'.emb.npy')
+  embeddings = embeddings.reshape((embeddings.shape[0], embeddings.shape[1]*embeddings.shape[2]))
   print('Loaded', embeddings.shape, 'embeddings')
 
   # prepare embedding search library:
