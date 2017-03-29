@@ -25,7 +25,7 @@ import torch.nn as nn
 import torchvision.models as models 
 import torchvision.transforms as transforms
 from annoy import AnnoyIndex # https://github.com/spotify/annoy
-
+np.set_printoptions(precision=2)
 
 def define_and_parse_args():
     # argument Checking
@@ -66,9 +66,7 @@ def initModel():
   # print(model)
   return model
 
-
-def getFrameEmbedding(model, frame, xres, yres, newsize):
-
+def preProcFrames(frame, xres, yres, newsize, crop_type):
   # image pre-processing functions:
   transformsImage = transforms.Compose([
         transforms.ToTensor(),
@@ -76,10 +74,27 @@ def getFrameEmbedding(model, frame, xres, yres, newsize):
                              std =[0.229, 0.224, 0.225]) # needed for pythorch ZOO models on ImageNet (stats)
     ])
 
-  if xres > yres:
-    frame = frame[:,int((xres - yres)/2):int((xres+yres)/2),:]
+  # crop and resize frame:
+  if crop_type == 'C': # center crop
+    if xres > yres:
+      frame = frame[:, int((xres - yres)/2):int((xres+yres)/2), :]
+    else:
+      frame = frame[int((yres - xres)/2):int((yres+xres)/2), :, :]
+  
+  elif crop_type == 'L': # left crop
+    if xres > yres:
+      frame = frame[:, xres - yres:xres, :]
+    else:
+      frame = frame[yres - xres:yres, :, :]
+  
+  elif crop_type == 'R': # right crop
+    if xres > yres:
+      frame = frame[:, 0:yres, :]
+    else:
+      frame = frame[0:xres, :, :]
+
   else:
-    frame = frame[int((yres - xres)/2):int((yres+xres)/2),:,:]
+    print('ERROR: Undefined crop type!')
 
   pframe = cv2.resize(frame, dsize=(newsize, newsize))
 
@@ -88,6 +103,13 @@ def getFrameEmbedding(model, frame, xres, yres, newsize):
   pframe = np.expand_dims(pframe, axis=0)
   pframe = transformsImage(pframe)
   pframe = torch.autograd.Variable(pframe) # turn Tensor to variable required for pytorch processing
+
+  return pframe
+
+
+def getFrameEmbedding(model, frame, xres, yres, newsize):
+
+  pframe = preProcFrames(frame, xres, yres, newsize, 'C')
      
   # process via CNN model:
   output = model(pframe)
