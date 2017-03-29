@@ -17,8 +17,8 @@ This can be used in augmented reality applications to localize a user in one of 
 `vloc.py` is a library to process and parse videos:
 
 - create embedding of a video
-- summarize a video (ignore similar frames)
 - localize in video 
+- summarize a video (ignore similar frames)
 
 ## What is needed:
 
@@ -53,3 +53,7 @@ The demo will take a caption file and a video input to label all object in each 
 Show closest frames in a video to selected frame in same video:
 
 ```python3 vloc.py -i video1.mp4 --queryf 400```
+
+Summarize a video:
+
+```python3 vloc.py -i video.mp4 --summarize True```
