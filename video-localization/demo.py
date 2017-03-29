@@ -19,7 +19,7 @@ import cv2 # install cv3, python3:  http://seeb0h.github.io/howto/howto-install-
 # add to profile: export PYTHONPATH=$PYTHONPATH:/usr/local/Cellar/opencv3/3.2.0/lib/python3.6/site-packages/
 import numpy as np
 from annoy import AnnoyIndex # https://github.com/spotify/annoy
-
+np.set_printoptions(precision=2)
 
 def define_and_parse_args():
     # argument Checking
@@ -94,6 +94,7 @@ def main():
    a.build(n_trees)
 
    # start processing:
+   err_pred = 0 # used to compute estimate of precision
    for i in range(frame_count-2):
       ret, frame = cap.read()
 
@@ -111,14 +112,25 @@ def main():
       # get appropriate caption based on recognized frame position in video
       if i < 1:
          t1,t2,textc = getCaptionData(0)
+         jselected = 0
+         jprev = 0
       
       ave_neighbor = np.mean(neighbors)
       tn = ave_neighbor * 1/fps # get time in seconds of this matched frame
       for j in range(len(captions)):
-         t1,t2,tmp = getCaptionData(j) # get next caption item
-         if (tn >= t1 and tn < t2): textc = tmp
+        t1,t2,tmp = getCaptionData(j) # get next caption item
+        if (tn >= t1 and tn < t2):
+          jselected = j # store index selected
+          textc = tmp
       
       # print(i, neighbors[0], j, t1, tn, t2, textc)
+
+      # get an estimate of precision: if index become smaller than previous one or it changes it is an error 
+      # (minus the len(caption) times it should!)
+      if jselected < jprev or jselected != jprev:
+        err_pred += 1
+
+      jprev = jselected # save previous caption result
 
       # overlay on GUI frame
       cv2.putText(frame, textc, (10, int(yres-20)), font, 1, (255, 255, 255), 2) 
@@ -132,6 +144,8 @@ def main():
       out.release()
    cap.release()
    # cv2.destroyAllWindows()
+   # print precision:
+   print('Error:', (err_pred - len(captions))/frame_count * 100, '%' )
 
 if __name__ == "__main__":
   main()
