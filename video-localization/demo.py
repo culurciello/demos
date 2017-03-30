@@ -81,6 +81,7 @@ def main():
 
    # load embeddings:
    embeddings = np.load(video_file+'.emb.npy')
+   embeddings = embeddings.reshape((embeddings.shape[0], embeddings.shape[1]*embeddings.shape[2]))
    print('Loaded', embeddings.shape, 'embeddings')
    
    # prepare embedding search library:
@@ -104,6 +105,7 @@ def main():
       
       # get embedding of query frame (i):  
       output = vloc.getFrameEmbedding(model, frame, xres, yres, args.size)
+      output = output.reshape((output.shape[0]*output.shape[1]))
 
       # get where is this frame in the video file?
       neighbors = a.get_nns_by_vector(output, num_neighbors, search_k=-1, include_distances=False)
