@@ -92,8 +92,8 @@ def spatialize_ec(model):
                 # print(j)
 
 
-
-print("FWDNXT PyTorch Object detector and localization")
+demo_title = 'FWDNXT Object detector and localization'
+print(demo_title)
 args = define_and_parse_args()
 categories = cat_file() # load category file
 font = cv2.FONT_HERSHEY_SIMPLEX
@@ -220,7 +220,7 @@ while True:
                 cv2.rectangle(frame, (x1,y1), (x2,y2), (255,0,0), 10)
                 cv2.putText(frame, categories[args.target], (x1+10, y1+30), font, 1, (255,0,0), 2)
 
-        cv2.imshow('win1', frame)
+        cv2.imshow(demo_title, frame)
 
         # debug thresholded image:
         # pthresh = cv2.resize(thresh, dsize=(xres, yres)) # resize to full frame size:
@@ -236,7 +236,7 @@ while True:
 
         # # overlay on GUI frame
         cv2.putText(frame, text, (10, yres-20), font, 0.5, (255, 255, 255), 1)
-        cv2.imshow('win', frame)
+        cv2.imshow(demo_title, frame)
 
     endt = time.time()
 

@@ -72,7 +72,8 @@ def load_fid_db():
     return fid_db
 
 
-print(">>> FWDNXT face demo")
+demo_title = 'FWDNXT face demo'
+print(demo_title)
 args = define_and_parse_args()
 font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -143,7 +144,8 @@ while True:
         # align the face using facial landmarks
         (x, y, w, h) = rect_to_bb(rect)
         faceAligned,_ = fa.align(frame, gray, rect)
-        frame[0:faceAligned.shape[1],0:faceAligned.shape[1],:] = faceAligned # show aligned face on frame
+        # overlay aligned face on frame bottom-left corner:
+        frame[yres-faceAligned.shape[1]:yres, 0:faceAligned.shape[1], :] = faceAligned
         pgray = faceAligned[:,:,1] # just take green channel instead of converting to grayscale!
         # pgray = cv2.cvtColor(faceAligned, cv2.COLOR_BGR2GRAY)
         pgray = np.reshape(pgray, (128, 128, 1))
@@ -175,8 +177,8 @@ while True:
 
     # show GUI:
     textsize = cv2.getTextSize(str(matched_id), font, 1, 2)[0] # (textsize[0], textsize[1]) are sizes X,Y
-    cv2.putText(frame, str(matched_id), (int(xres - textsize[0] - 30), 30), font, 1, (255,0,0), 2)
-    cv2.imshow('win1', frame)
+    cv2.putText(frame, str(matched_id), (int(xres-textsize[0]-30), yres-30), font, 1, (255,0,0), 2)
+    cv2.imshow(demo_title, frame)
 
     # timings, etc:
     endt = time.time()
