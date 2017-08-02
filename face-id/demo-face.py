@@ -1,7 +1,10 @@
 #! /usr/local/bin/python3
 
 # E. Culurciello, July 2017
-# face demo
+# This can do 3 things: 
+# mode 1: face-id demo
+# mode 2: create database from camera
+# mode 3: load face images to create database
 
 import sys
 import os
@@ -30,7 +33,8 @@ def define_and_parse_args():
     parser.add_argument('--fsize', type=int, default=128, help='network input size')
     parser.add_argument('--fid_features_size', type=int, default=256, help='size of face features from neural net')
     parser.add_argument('--num_classes', default=79077, type=int, help='number of classes (default: 79077)')
-    parser.add_argument('--extract', type=bool, default=False, help='extract face features')
+    parser.add_argument('--mode', type=str, default='1', help='operation mode: 1=demo, 2=camera to db, 3=folder to db')
+    parser.add_argument('--face_images_dir', type=str, default='', help='face images directory to convert to database')
     return parser.parse_args()
 
 
@@ -71,22 +75,67 @@ def load_fid_db():
 
     return fid_db
 
+def process(frame):
+    gray = frame[:,:,1] # just take green channel instead of converting to grayscale!
+    # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # frame converted to grayscale
+    
+    # detect faces:
+    dets = detector(frame, 1)
+    # print(" Number of faces detected: {} ".format(len(dets)))
+    # for i, d in enumerate(dets):
+        # print(" Detection {}: Left: {} Top: {} Right: {} Bottom: {} ".format(
+            # i, d.left(), d.top(), d.right(), d.bottom()))
+
+    # loop over face detections:
+    features = None
+    faceAligned = None
+    for rect in dets:
+        # align the face using facial landmarks
+        (x, y, w, h) = rect_to_bb(rect)
+        faceAligned,_ = fa.align(frame, gray, rect)
+        pgray = faceAligned[:,:,1] # just take green channel instead of converting to grayscale!
+        # pgray = cv2.cvtColor(faceAligned, cv2.COLOR_BGR2GRAY)
+        pgray = np.reshape(pgray, (128, 128, 1))
+
+        # extract face features:
+        pgray = transform(pgray)
+        face_in = pgray.unsqueeze(0)
+        face_in_var = torch.autograd.Variable(face_in, volatile=True)
+        _, features = model(face_in_var) # [1,256] features
+        features = features.data.numpy()[0]
+        # print(features)
+
+    return features, faceAligned
+
+
+def db_from_images():
+    # get all images in a folder of folders/identities and create a face database
+    for x in os.walk(args.face_images_dir):
+        folder = x[0]
+        name_id = os.path.basename(folder) # identity of faces in this folder
+        if name_id != '':
+            # print(name_id)
+            list_features = []
+            for filename in os.listdir(folder): # loop over all images in folder
+                img = cv2.imread(os.path.join(folder,filename))
+                if img is not None:
+                    # print(filename)
+                    features,_ = process(img)
+                    if features is not None:
+                        list_features.append(features)
+
+            print('Name:', name_id, 'images processed:', len(list_features))
+            fid_features = np.asarray(list_features)
+            outfile = args.fid_db_dir + name_id + '.npy'
+            np.save(outfile, fid_features)
+
+
+
 
 demo_title = 'FWDNXT face demo'
 print(demo_title)
 args = define_and_parse_args()
 font = cv2.FONT_HERSHEY_SIMPLEX
-
-# if we want to extract faces examples for an id, we ask the name:
-if args.extract: 
-    print('Extracting face features for local face database. Please face the camera.')
-    fid_name = input('Input your name: ')
-    fid_name_dir =  args.fid_db_dir + fid_name
-    # create face db features entry
-    fid_features = np.zeros((args.fid_num_face_db, args.fid_features_size))
-else:
-    face_id_database = load_fid_db()
-    print('>>> Loaded face identities database: ', list(face_id_database.keys()))
 
 # setup camera input:
 xres=640
@@ -119,7 +168,29 @@ model.load_state_dict( model_dict['weights'] )
 
 transform = transforms.Compose([transforms.ToTensor()])
 
-if args.extract: fid_counter = 0 # face id counter for taking examples
+# if we want to extract faces examples for an id, we ask the name:
+if args.mode == '2':
+    if not os.path.exists(args.fid_db_dir):
+        os.mkdir(args.fid_db_dir)
+    print('Extracting face features for local face database. Please face the camera.')
+    fid_name = input('Input your name: ')
+    fid_name_dir =  args.fid_db_dir + fid_name
+    # create face db features entry
+    fid_features = np.zeros((args.fid_num_face_db, args.fid_features_size))
+    fid_counter = 0 # face id counter for taking examples
+elif args.mode == '3':
+    args.fid_db_dir = './face-folder-db/' # change the name of the db newly created from folder (so we do not overwrite other dbs)
+    if not os.path.exists(args.fid_db_dir):
+        os.mkdir(args.fid_db_dir)
+    print('Creating dataset out of folder of face images.')
+    db_from_images()
+    print('>>> done! exiting...')
+    sys.exit()
+
+elif args.mode == '1':
+    face_id_database = load_fid_db()
+    print('>>> Loaded face identities database: ', list(face_id_database.keys()))
+
 
 while True:
     startt = time.time()
@@ -128,46 +199,21 @@ while True:
         print('no camera input!')
         break
 
-    gray = frame[:,:,1] # just take green channel instead of converting to grayscale!
-    # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # frame converted to grayscale
-    
-    # detect faces:
-    dets = detector(frame, 1)
-    # print(" Number of faces detected: {} ".format(len(dets)))
-    # for i, d in enumerate(dets):
-        # print(" Detection {}: Left: {} Top: {} Right: {} Bottom: {} ".format(
-            # i, d.left(), d.top(), d.right(), d.bottom()))
-
-    # loop over face detections:
     matched_id = ''
-    for rect in dets:
-        # align the face using facial landmarks
-        (x, y, w, h) = rect_to_bb(rect)
-        faceAligned,_ = fa.align(frame, gray, rect)
+    features, faceAligned = process(frame)
+    if features is not None:
         # overlay aligned face on frame bottom-left corner:
         frame[yres-faceAligned.shape[1]:yres, 0:faceAligned.shape[1], :] = faceAligned
-        pgray = faceAligned[:,:,1] # just take green channel instead of converting to grayscale!
-        # pgray = cv2.cvtColor(faceAligned, cv2.COLOR_BGR2GRAY)
-        pgray = np.reshape(pgray, (128, 128, 1))
-
-        # extract face features:
-        pgray = transform(pgray)
-        face_in = pgray.unsqueeze(0)
-        face_in_var = torch.autograd.Variable(face_in, volatile=True)
-        _, features = model(face_in_var) # [1,256] features
-        features = features.data.numpy()[0]
-        # print(features)
-
-        if args.extract:
+        if args.mode == '2':
             if fid_counter < args.fid_num_face_db:
                 fid_features[fid_counter] = features
                 fid_counter += 1 # increment face id counter
-        else:
+        elif args.mode == '1':
             matched_id = match_face_to_db(features, face_id_database) # match faces to database:
             # print('>>> Identified: ', matched_id, '\n\n')
 
-    # terminate program if we collected enough faces
-    if args.extract and fid_counter >= args.fid_num_face_db:
+    # terminate program if we collected enough faces in collect mode 2
+    if args.mode == '2' and fid_counter >= args.fid_num_face_db:
         outfile = fid_name_dir + '.npy'
         np.save(outfile, fid_features)
         print('Collected ', args.fid_num_face_db, ' faces for id ', fid_name)
