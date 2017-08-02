@@ -138,6 +138,7 @@ while True:
             # i, d.left(), d.top(), d.right(), d.bottom()))
 
     # loop over face detections:
+    matched_id = ''
     for rect in dets:
         # align the face using facial landmarks
         (x, y, w, h) = rect_to_bb(rect)
@@ -161,7 +162,7 @@ while True:
                 fid_counter += 1 # increment face id counter
         else:
             matched_id = match_face_to_db(features, face_id_database) # match faces to database:
-            print('>>> Identified: ', matched_id, '\n\n')
+            # print('>>> Identified: ', matched_id, '\n\n')
 
     # terminate program if we collected enough faces
     if args.extract and fid_counter >= args.fid_num_face_db:
@@ -173,6 +174,8 @@ while True:
         break
 
     # show GUI:
+    textsize = cv2.getTextSize(str(matched_id), font, 1, 2)[0] # (textsize[0], textsize[1]) are sizes X,Y
+    cv2.putText(frame, str(matched_id), (int(xres - textsize[0] - 30), 30), font, 1, (255,0,0), 2)
     cv2.imshow('win1', frame)
 
     # timings, etc:
