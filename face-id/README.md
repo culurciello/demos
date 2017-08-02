@@ -7,7 +7,12 @@ This demo runs face identification based on [LightCNN](https://github.com/Alfred
 
 `python3 demo-face.py --extract True`
  
- This collects a small amount of samples and creates a database for demo to work on.
+This collects a small amount of samples and creates a database for demo to work on.
+ 
+ 
+In order to convert the model from LightCNN for CPU use, we run:
+
+`convert-cpu-model.py`
  
  
 ### Demo
