@@ -19,15 +19,14 @@ import torchvision.transforms as transforms
 # from model_spatial import ModelDef # contains def of spatial model
 import dlib
 from facealigner import FaceAligner # http://www.pyimagesearch.com/2017/05/22/face-alignment-with-opencv-and-python/
-from light_cnn import LightCNN # https://github.com/AlfredXiangWu/LightCNN/
 
 def define_and_parse_args():
     # argument Checking
     parser = argparse.ArgumentParser(description="Face Identification Demo")
-    # parser.add_argument('model', help='model directory')
     parser.add_argument('--fid_db_dir', type=str, default='./face-db/', help='face database directory')
     parser.add_argument('--fid_num_face_db', type=int, default=10, help='number of faces to save in database per id')
     parser.add_argument('-i', '--input', default='0', help='camera device index or file name, default 0')
+    parser.add_argument('--model', default='LightCNN_model_cpu.pth', type=str, help='path to trained model')
     parser.add_argument('--fsize', type=int, default=128, help='network input size')
     parser.add_argument('--fid_features_size', type=int, default=256, help='size of face features from neural net')
     parser.add_argument('--num_classes', default=79077, type=int, help='number of classes (default: 79077)')
@@ -49,19 +48,16 @@ def rect_to_bb(rect):
 
 
 def match_face_to_db(feats_in, fid_db):
-    print('feats_in stats:', feats_in[0:10], feats_in.mean(),feats_in.std())
     # find minimum distance of input features to database entries:
     min_dist = 1e12 # a huge number 
     for name_db, f_db in fid_db.items():
         for i in range(f_db.shape[0]):
             dist = distance.cosine( feats_in, f_db[i,:] )
-            print(dist, name_db)
+            # print(dist, name_db) # to debug
             if dist < min_dist:
                 min_dist = dist
                 matched_id = name_db
-                # print(min_dist, id_key)
-                
-    # print(min_dist, id_key)
+
     return matched_id
 
 
@@ -70,7 +66,7 @@ def load_fid_db():
     fid_db = {}
     for fn in glob.glob(args.fid_db_dir+'/*.npy'):
         base = os.path.basename(fn)
-        # print(os.path.splitext(base)[0]) # id name
+        # print(os.path.splitext(base)[0]) # gives you the id name
         fid_db[os.path.splitext(base)[0]] = np.load(fn)
 
     return fid_db
@@ -85,9 +81,6 @@ if args.extract:
     print('Extracting face features for local face database. Please face the camera.')
     fid_name = input('Input your name: ')
     fid_name_dir =  args.fid_db_dir + fid_name
-    # if not os.path.exists(name_dir):
-        # os.makedirs(name_dir)
-
     # create face db features entry
     fid_features = np.zeros((args.fid_num_face_db, args.fid_features_size))
 else:
@@ -117,9 +110,11 @@ detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('./shape_predictor_68_face_landmarks.dat')
 fa = FaceAligner(predictor, desiredFaceWidth=args.fsize)
 
-# load trained neural face id net:
-model = LightCNN(pretrained=True, num_classes=args.num_classes)
-model.eval()
+netfile = args.model
+print('Importing PyTorch model from:', netfile)
+model_dict = torch.load(netfile)
+model = model_dict['model_def']
+model.load_state_dict( model_dict['weights'] )
 
 transform = transforms.Compose([transforms.ToTensor()])
 
@@ -151,7 +146,7 @@ while True:
         pgray = faceAligned[:,:,1] # just take green channel instead of converting to grayscale!
         # pgray = cv2.cvtColor(faceAligned, cv2.COLOR_BGR2GRAY)
         pgray = np.reshape(pgray, (128, 128, 1))
-        # pgray = (pgray-pgray.mean())/pgray.std() # basic input normalization (not needed!)
+
         # extract face features:
         pgray = transform(pgray)
         face_in = pgray.unsqueeze(0)

@@ -32,7 +32,7 @@ def shape_to_np(shape, dtype="int"):
 
 
 class FaceAligner:
-	def __init__(self, predictor, desiredLeftEye=(0.35, 0.35), ec_mc_y=48,
+	def __init__(self, predictor, desiredLeftEye=(0.32, 0.32),
 		desiredFaceWidth=256, desiredFaceHeight=None):
 		# store the facial landmark predictor, desired output left
 		# eye position, and desired output face width + height
@@ -40,7 +40,11 @@ class FaceAligner:
 		self.desiredLeftEye = desiredLeftEye
 		self.desiredFaceWidth = desiredFaceWidth
 		self.desiredFaceHeight = desiredFaceHeight
-		self.ec_mc_y = ec_mc_y
+
+		# https://github.com/AlfredXiangWu/face_verification_experiment/blob/master/code/face_db_align.m
+		# ec_mc_y=48, ec_y =40
+		# self.ec_mc_y = ec_mc_y
+		# self.ec_y =ec_y
 
 		# if the desired face height is None, set it to be the
 		# desired face width (normal behavior)
@@ -58,15 +62,15 @@ class FaceAligner:
 		# extract the left and right eye (x, y)-coordinates
 		(lStart, lEnd) = FACIAL_LANDMARKS_IDXS["left_eye"]
 		(rStart, rEnd) = FACIAL_LANDMARKS_IDXS["right_eye"]
-		(mStart, mEnd) = FACIAL_LANDMARKS_IDXS["mouth"]
+		# (mStart, mEnd) = FACIAL_LANDMARKS_IDXS["mouth"]
 		leftEyePts = shape[lStart:lEnd]
 		rightEyePts = shape[rStart:rEnd]
-		mouthPts = shape[mStart:mEnd]
+		# mouthPts = shape[mStart:mEnd]
 
 		# compute the center of mass for each eye
 		leftEyeCenter = leftEyePts.mean(axis=0).astype("int")
 		rightEyeCenter = rightEyePts.mean(axis=0).astype("int")
-		mounthCenter = mouthPts.mean(axis=0).astype("int")
+		# mounthCenter = mouthPts.mean(axis=0).astype("int")
 
 		# compute the angle between the eye centroids
 		dY = rightEyeCenter[1] - leftEyeCenter[1]
@@ -77,18 +81,18 @@ class FaceAligner:
 		# desired x-coordinate of the left eye
 		desiredRightEyeX = 1.0 - self.desiredLeftEye[0]
 
-				# compute center (x, y)-coordinates (i.e., the median point)
+		# compute center (x, y)-coordinates (i.e., the median point)
 		# between the two eyes in the input image
 		eyesCenter = ((leftEyeCenter[0] + rightEyeCenter[0]) // 2,
 			(leftEyeCenter[1] + rightEyeCenter[1]) // 2)
 
 		# determine the scale of the new resulting image
+		dist = np.sqrt((dX ** 2) + (dY ** 2))
+		desiredDist = (desiredRightEyeX - self.desiredLeftEye[0])
+		desiredDist *= self.desiredFaceWidth
+		scale = desiredDist / dist
 		# using: https://github.com/AlfredXiangWu/face_verification_experiment/blob/5142b9db314557ba1fea974dee74496f5ec4d2c3/README.md
-		# dist = np.sqrt((dX ** 2) + (dY ** 2))
-		# desiredDist = (desiredRightEyeX - self.desiredLeftEye[0])
-		# desiredDist *= self.desiredFaceWidth
-		# scale = desiredDist / dist
-		scale = self.ec_mc_y/(mounthCenter[1]-eyesCenter[1])
+		# scale = self.ec_mc_y/(mounthCenter[1]-eyesCenter[1])
 
 		# grab the rotation matrix for rotating and scaling the face
 		M = cv2.getRotationMatrix2D(eyesCenter, angle, scale)
@@ -103,6 +107,9 @@ class FaceAligner:
 		(w, h) = (self.desiredFaceWidth, self.desiredFaceHeight)
 		output = cv2.warpAffine(image, M, (w, h),
 			flags=cv2.INTER_CUBIC)
+
+		# test save:
+		# cv2.imwrite('test-align.png', output)
 
 		# return the aligned face
 		return output, (rightEyeCenter, leftEyeCenter)

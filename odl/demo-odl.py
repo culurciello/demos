@@ -117,7 +117,7 @@ print('camera width, height:', xres, ' x ', yres)
 # load pyTorch CNN moodels:
 netfile = args.model + '/model.pth'
 print('Importing PyTorch model from:', netfile)
-model_dict = torch.load(netfile, map_location=lambda storage, loc: storage)
+model_dict = torch.load(netfile)
 model = model_dict['model_def']
 model.load_state_dict( model_dict['weights'] )
 
