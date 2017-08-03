@@ -33,7 +33,7 @@ def define_and_parse_args():
     parser.add_argument('--fsize', type=int, default=128, help='network input size')
     parser.add_argument('--fid_features_size', type=int, default=256, help='size of face features from neural net')
     parser.add_argument('--num_classes', default=79077, type=int, help='number of classes (default: 79077)')
-    parser.add_argument('--mode', type=str, default='1', help='operation mode: 1=demo, 2=camera to db, 3=folder to db')
+    parser.add_argument('--mode', type=str, default='1', help='operation mode: 1=demo, 2=camera to db, 3=folder to db, 4=train folder to classifier')
     parser.add_argument('--face_images_dir', type=str, default='', help='face images directory to convert to database')
     return parser.parse_args()
 
@@ -182,11 +182,10 @@ elif args.mode == '3':
     args.fid_db_dir = './face-folder-db/' # change the name of the db newly created from folder (so we do not overwrite other dbs)
     if not os.path.exists(args.fid_db_dir):
         os.mkdir(args.fid_db_dir)
-    print('Creating dataset out of folder of face images.')
+    print('Creating dataset from a folder of face images.')
     db_from_images()
     print('>>> done! exiting...')
     sys.exit()
-
 elif args.mode == '1':
     face_id_database = load_fid_db()
     print('>>> Loaded face identities database: ', list(face_id_database.keys()))

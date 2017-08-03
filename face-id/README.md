@@ -5,19 +5,29 @@ This demo runs face identification based on [LightCNN](https://github.com/Alfred
 
 ### Initial setup
 
-`python3 demo-face.py --extract True`
  
-This collects a small amount of samples and creates a database for demo to work on.
- 
+##### Convert model:
  
 In order to convert the model from LightCNN for CPU use, we run:
 
 `convert-cpu-model.py`
+
+##### Collect dataset data from camera:
+
+`python3 demo-face.py --mode 2`
  
+This collects a small amount of samples and creates a database for demo to work on.
+
+##### Train database from a folder of images:
+
+This will extract a dataset from a folder of folders (name/id) of face images:
+
+`python3 demo-face.py --mode 3 --face_images_dir /your/data/dir/ `
+
  
 ### Demo
  
-Run demo as:
+Run demo (mode 1) as:
 
 `python3 demo-face.py`
 
