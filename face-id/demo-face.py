@@ -75,6 +75,7 @@ def load_fid_db():
 
     return fid_db
 
+
 def process(frame):
     gray = frame[:,:,1] # just take green channel instead of converting to grayscale!
     # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) # frame converted to grayscale
@@ -102,6 +103,7 @@ def process(frame):
         face_in = pgray.unsqueeze(0)
         face_in_var = torch.autograd.Variable(face_in, volatile=True)
         _, features = model(face_in_var) # [1,256] features
+        if classifier_present: features = classifier(features)
         features = features.data.numpy()[0]
         # print(features)
 
@@ -128,8 +130,6 @@ def db_from_images():
             fid_features = np.asarray(list_features)
             outfile = args.fid_db_dir + name_id + '.npy'
             np.save(outfile, fid_features)
-
-
 
 
 demo_title = 'FWDNXT face demo'
@@ -187,6 +187,13 @@ elif args.mode == '3':
     print('>>> done! exiting...')
     sys.exit()
 elif args.mode == '1':
+    cpath = args.fid_db_dir + '/classifier.pth'
+    if os.path.exists(cpath):
+        classifier_present = True # used to notify program classifier exists
+        model_dict = torch.load(cpath)
+        classifier = model_dict['model_def']
+        classifier.load_state_dict( model_dict['weights'] )
+    
     face_id_database = load_fid_db()
     print('>>> Loaded face identities database: ', list(face_id_database.keys()))
 
@@ -208,7 +215,11 @@ while True:
                 fid_features[fid_counter] = features
                 fid_counter += 1 # increment face id counter
         elif args.mode == '1':
-            matched_id = match_face_to_db(features, face_id_database) # match faces to database:
+            if classifier_present:
+                # print(features, np.max(features), np.argmax(features))
+                matched_id = list( face_id_database.keys() ) [np.argmax(features)]
+            else:
+                matched_id = match_face_to_db(features, face_id_database) # match faces to database:
             # print('>>> Identified: ', matched_id, '\n\n')
 
     # terminate program if we collected enough faces in collect mode 2

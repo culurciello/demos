@@ -24,6 +24,12 @@ This will extract a dataset from a folder of folders (name/id) of face images:
 
 `python3 demo-face.py --mode 3 --face_images_dir /your/data/dir/ `
 
+
+#### convert database to classifier:
+
+If you have a lot of samples of faces in your dataset, distance classifiers will be slow. In this case we recommend you train a classifier on your data, with:
+
+`python3 classifier.py face-folder-db/`
  
 ### Demo
  
