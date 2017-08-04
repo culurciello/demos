@@ -168,6 +168,8 @@ model.load_state_dict( model_dict['weights'] )
 
 transform = transforms.Compose([transforms.ToTensor()])
 
+classifier_present = False
+
 # if we want to extract faces examples for an id, we ask the name:
 if args.mode == '2':
     if not os.path.exists(args.fid_db_dir):
