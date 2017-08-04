@@ -37,4 +37,4 @@ Run demo (mode 1) as:
 
 `python3 demo-face.py`
 
-Before using, you need to create your database of users examples. This is done by standing in front of camera and running:
+Before using, you need to create your database of users examples. This is done by standing in front of camera and running one of the scripts above.
